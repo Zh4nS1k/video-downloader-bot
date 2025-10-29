@@ -28,27 +28,16 @@ URL_REGEX = r"https?://\S+"
 
 GLOBAL_CONCURRENCY = 3
 
-# GIF'ы для уведомлений
+# GIF'ы для уведомлений (рабочие проверенные ссылки)
 SUCCESS_GIFS = [
-    "https://media.tenor.com/LXf4rKIRbkIAAAAC/success.gif",
-    "https://media.tenor.com/eyZk4aVqE0gAAAAC/ok-yes.gif",
-    "https://media.tenor.com/6gT7U4wA0U0AAAAC/check-mark.gif",
-    "https://media.tenor.com/3O0mZcp8k7wAAAAC/success-celebrate.gif",
-    "https://media.tenor.com/0QVtYHfdn0kAAAAC/verified.gif",
-    "https://media.tenor.com/6Gd1pIzc1JkAAAAC/done-task.gif",
-    "https://media.tenor.com/2q1cQ5Q5Q5QAAAAC/success-rocket.gif",
-    "https://media.tenor.com/9Q1Q1Q1Q1Q1AAAAC/approved.gif"
+	"https://i.gifer.com/embedded/download/7TyW.gif",
+	"https://i.gifer.com/embedded/download/7pld.gif",
+	"https://i.gifer.com/embedded/download/7nUZ.gif",
 ]
 
 WORKING_GIFS = [
-    "https://media.tenor.com/1cQw6cZ6p6wAAAAC/loading.gif",
-    "https://media.tenor.com/UnFx-k_lSckAAAAC/amalie-steiness.gif",
-    "https://media.tenor.com/5oQjX1Q1Q1QAAAAC/loading-waiting.gif",
-    "https://media.tenor.com/3Q1Q1Q1Q1Q1AAAAC/spinner.gif",
-    "https://media.tenor.com/7Q1Q1Q1Q1Q1AAAAC/processing.gif",
-    "https://media.tenor.com/8Q1Q1Q1Q1Q1AAAAC/loading-bar.gif",
-    "https://media.tenor.com/4Q1Q1Q1Q1Q1AAAAC/hourglass.gif",
-    "https://media.tenor.com/2Q1Q1Q1Q1Q1AAAAC/working.gif"
+	"https://i.gifer.com/embedded/download/ZKZx.gif",
+	"https://i.gifer.com/embedded/download/ZXDX.gif",
 ]
 
 # Файл для отзывов

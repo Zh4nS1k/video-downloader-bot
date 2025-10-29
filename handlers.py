@@ -199,12 +199,13 @@ async def _download(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str
 		status_msg = None
 		start_ts = time.monotonic()
 		try:
-			# Анимация скачивания
-			work_gif = WORKING_GIFS[int(time.time()) % len(WORKING_GIFS)]
+			# Анимация скачивания (с fallback на текст)
 			try:
+				work_gif = WORKING_GIFS[int(time.time()) % len(WORKING_GIFS)]
 				anim_msg = await update.message.reply_animation(animation=work_gif, caption="Скачиваю… ⏳")
-			except Exception:
-				pass
+			except Exception as gif_err:
+				logger.debug("⚠️ GIF не отправился, используем текст: %s", gif_err)
+				anim_msg = await update.message.reply_text("Скачиваю… ⏳")
 			await context.bot.send_chat_action(update.effective_chat.id, ChatAction.UPLOAD_VIDEO)
 			status_msg = await update.message.reply_text("Готовлю загрузку…", reply_markup=menu_kb())
 			await update.message.reply_text("Используйте клавиатуру ниже ⬇️", reply_markup=reply_kb())
@@ -237,7 +238,34 @@ async def _download(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str
 
 					# Отправка файла
 					if st.mode == MODE_AUDIO:
-						await update.message.reply_audio(audio=res.file_path.open('rb'), filename=res.filename, caption="Готово! 🎵")
+						# Валидация и отправка аудио
+						audio_path = res.file_path
+						file_size = audio_path.stat().st_size
+						# Проверка размера для аудио (Telegram лимит ~50MB для ботов)
+						if file_size > 50 * 1024 * 1024:
+							await update.message.reply_document(
+								document=audio_path.open('rb'),
+								filename=res.filename,
+								caption="Готово! 🎵 (Файл отправлен как документ из-за размера)"
+							)
+						else:
+							# Убедимся, что filename имеет правильное расширение
+							clean_filename = res.filename
+							if not clean_filename.lower().endswith(('.mp3', '.m4a', '.ogg', '.wav')):
+								clean_filename = audio_path.stem + '.mp3'
+							try:
+								await update.message.reply_audio(
+									audio=audio_path.open('rb'),
+									filename=clean_filename,
+									caption="Готово! 🎵"
+								)
+							except Exception as audio_err:
+								logger.warning("⚠️ Audio send failed, trying as document: %s", audio_err)
+								await update.message.reply_document(
+									document=audio_path.open('rb'),
+									filename=clean_filename,
+									caption="Готово! 🎵"
+								)
 					else:
 						if res.filename.lower().endswith((".mp4",".mov",".m4v",".webm",".mkv")):
 							await update.message.reply_video(video=res.file_path.open('rb'), supports_streaming=True, caption="Готово! 🎬")
@@ -248,12 +276,13 @@ async def _download(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str
 					total_time = time.monotonic() - start_ts
 					logger.info("📤 uploaded in %.2fs (total %.2fs)", upload_time, total_time)
 
-					# GIF успеха
+					# GIF успеха (с fallback на эмодзи)
 					try:
 						succ_gif = SUCCESS_GIFS[int(time.time()) % len(SUCCESS_GIFS)]
 						await update.message.reply_animation(animation=succ_gif, caption="Спасибо, что пользуетесь ботом! 💙")
 					except Exception as e:
-						logger.warning("⚠️ Не удалось отправить GIF: %s", e)
+						logger.debug("⚠️ GIF не отправился: %s", e)
+						await update.message.reply_text("✅ Спасибо, что пользуетесь ботом! 💙")
 
 					# Запрос отзыва
 					await update.message.reply_text("Пожалуйста, оставьте короткий отзыв 📝 — это займёт 5 секунд!", reply_markup=reply_kb())
