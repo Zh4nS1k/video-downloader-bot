@@ -1,48 +1,27 @@
-## Telegram Video Downloader Bot (TikTok + YouTube)
+# Telegram Downloader Bot (YouTube + TikTok + Shorts/Reels/VK/X via yt-dlp)
 
-A Python Telegram bot that downloads videos from TikTok (without watermark when available) and YouTube, with user-selectable quality.
+Minimal UX:
+- Send a link → choose 🎬 Video or 🎧 Audio → (for video) choose real qualities → get file.
+- No reply keyboards, no spam.
+- Retry (3x) per backend, then failover to next backend (yt-dlp → pytube → savefrom).
+- Size soft-limit check; hint to lower quality or audio if too big for Telegram.
 
-### Features
+## Local run
+```bash
+pip install -r requirements.txt
+cp .env.example .env  # put your BOT_TOKEN
+python bot.py
+```
 
-- TikTok and YouTube downloading via `yt-dlp`
-- TikTok: requests no-watermark downloads when available
-- Quality selection: Original (best), 1080p, 720p, 480p
-- Uses `.env` for bot token
+## Render.com deploy
+1. New Web Service → connect this repo / upload ZIP → set **Environment** to Python.
+2. Build command: `pip install -r requirements.txt`
+3. Start command: `python bot.py`
+4. Add env var `BOT_TOKEN` with your token.
+5. (Optional) Add `LOG_LEVEL=INFO`.
+> Polling is used (no public URL required). For webhook deploy, adapt to FastAPI easily.
 
-### Requirements
-
-- Python 3.10+
-- A Telegram Bot Token from `@BotFather`
-
-### Setup
-
-1. Clone or open this project.
-2. Create a `.env` file in the project root:
-   ```env
-   BOT_TOKEN=123456:ABC-YourTelegramBotToken
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Run the bot:
-   ```bash
-   python bot.py
-   ```
-
-### Usage
-
-- Start the bot: `/start`
-- Choose a platform (TikTok or YouTube)
-- Choose quality
-- Send the video URL
-- Bot returns the video if size allows. If too large for Telegram limits, try a lower quality.
-
-### Notes
-
-- Telegram bots have file size limits. If a selected quality exceeds the limit, the bot will ask to choose a lower quality.
-- TikTok no-watermark is attempted using `yt-dlp` extractor arguments and is subject to availability per video.
-
-### License
-
-MIT
+## Commands
+- `/start` — clean start
+- `/reset` — clear state
+- `/help` — brief help

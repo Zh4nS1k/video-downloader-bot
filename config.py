@@ -1,44 +1,29 @@
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN is not set in .env")
+    raise RuntimeError("BOT_TOKEN is not set in environment (.env)")
 
-# platforms & modes
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+# Platforms & modes
 PLATFORM_TIKTOK = "tiktok"
 PLATFORM_YOUTUBE = "youtube"
 MODE_VIDEO = "video"
 MODE_AUDIO = "audio"
 
-# qualities
+# Qualities (fallback options if probing fails)
 QUALITY_BEST = "best"
-QUALITY_1080P = "1080p"
-QUALITY_720P = "720p"
-QUALITY_480P = "480p"
-QUALITY_ORDER = [QUALITY_1080P, QUALITY_720P, QUALITY_480P, QUALITY_BEST]
+QUALITY_LIST_DEFAULT = ["2160p","1440p","1080p","720p","480p","360p","240p","144p"]
 
-# Увеличенный лимит для больших видео
-MAX_BOT_FILE_SIZE = 1800 * 1024 * 1024  # ~1.8GB
+# Soft limit for Telegram files (~1.9GB). Telegram hard limit is ~2GB for many clients.
+TELEGRAM_SOFT_LIMIT = 1900 * 1024 * 1024
 
-URL_REGEX = r"https?://\S+"
-
+# Concurrency: only a few downloads at a time
 GLOBAL_CONCURRENCY = 3
 
-# GIF'ы для уведомлений (рабочие проверенные ссылки)
-SUCCESS_GIFS = [
-	"https://i.gifer.com/embedded/download/7TyW.gif",
-	"https://i.gifer.com/embedded/download/7pld.gif",
-	"https://i.gifer.com/embedded/download/7nUZ.gif",
-]
-
-WORKING_GIFS = [
-	"https://i.gifer.com/embedded/download/ZKZx.gif",
-	"https://i.gifer.com/embedded/download/ZXDX.gif",
-]
-
-# Файл для отзывов
-REVIEWS_FILE = Path("reviews.txt")
+# URL detection
+URL_REGEX = r"https?://\S+"
