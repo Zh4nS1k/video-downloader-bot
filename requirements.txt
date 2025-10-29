@@ -3,3 +3,4 @@ python-dotenv==1.0.1
 yt-dlp>=2024.04.09
 pytube>=15.0.0
 aiofiles==24.1.0
+pymongo>=4.8.0

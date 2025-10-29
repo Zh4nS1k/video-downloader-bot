@@ -7,6 +7,7 @@ from telegram.constants import ChatAction
 from config import *
 from keyboards import mode_kb, quality_kb_from, review_optin_kb
 from downloader import BACKENDS, DownloadRequest, list_available_qualities
+from db import save_download, save_review
 
 logger = logging.getLogger("bot")
 URL_RE = re.compile(URL_REGEX, re.IGNORECASE)
@@ -21,6 +22,7 @@ class State:
         self.pending_url = None
         self.available_qualities = []
         self.awaiting_review = False
+        self.last_action = None
 
 def get_state(context: ContextTypes.DEFAULT_TYPE) -> State:
     st = context.user_data.get("state")
@@ -63,9 +65,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if st.awaiting_review:
         if 3 <= len(text) <= 200 and not text.startswith("/"):
-            p = Path("reviews.txt")
-            prev = p.read_text(encoding="utf-8") if p.exists() else ""
-            prev += f"\n[{datetime.now().isoformat()}] {update.effective_user.id}: {text}"
+            user_id = update.effective_user.id if update.effective_user else "?"
+            action = st.last_action or "unknown"
+            save_review({"userId": user_id, "action": action, "text": text})
+            p = Path("reviews.txt"); prev = p.read_text(encoding="utf-8") if p.exists() else ""
+            prev += f"\n[{datetime.now().isoformat()}] user={user_id} action={action}: {text}"
             p.write_text(prev, encoding="utf-8")
             await update.message.reply_text("Спасибо за отзыв! 💛")
         st.awaiting_review = False
@@ -98,13 +102,15 @@ async def on_mode(update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str)
 
     if mode == MODE_AUDIO:
         await context.bot.send_message(chat_id, "🎧 Конвертирую в MP3 (320 kbps)…")
+        st.last_action = f"{st.platform}:{mode}:request"
+        context.user_data["state"] = st
         await _download(update, context, url)
         return
 
-    # Video
     try:
         quals = list_available_qualities(url, st.platform) or QUALITY_LIST_DEFAULT
         st.available_qualities = quals
+        st.last_action = f"{st.platform}:{mode}:qualities_listed"
         context.user_data["state"] = st
         await update.callback_query.message.reply_text("Доступные качества (динамически):", reply_markup=quality_kb_from(quals))
     except Exception as e:
@@ -115,6 +121,8 @@ async def on_mode(update: Update, context: ContextTypes.DEFAULT_TYPE, mode: str)
 async def on_quality(update: Update, context: ContextTypes.DEFAULT_TYPE, q: str):
     st = get_state(context)
     st.quality = q
+    st.last_action = f"{st.platform}:{st.mode}:quality={q}"
+    context.user_data["state"] = st
     await _download(update, context, st.pending_url)
 
 async def _download(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str):
@@ -125,40 +133,43 @@ async def _download(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str
         return
 
     async with global_semaphore:
-        task = asyncio.current_task()
-        active_tasks[user_id] = task
+        task = asyncio.current_task(); active_tasks[user_id] = task
         st = get_state(context)
         try:
             await context.bot.send_chat_action(chat_id, ChatAction.TYPING)
-
             req = DownloadRequest(url=url, platform=st.platform, mode=st.mode, quality=st.quality or QUALITY_BEST)
-
             last_err = None
-            # Failover chain across backends with 3 retries * 3s
             for backend in BACKENDS:
                 for attempt in range(1, 4):
                     try:
-                        logger.info("try backend=%s attempt=%s", backend.name, attempt)
-                        # run sync download in thread
                         res = await asyncio.to_thread(backend.download, req)
-                        # send result
                         if req.mode == MODE_AUDIO:
                             await context.bot.send_audio(chat_id, res.file_path.open('rb'), caption="🎵 Готово!")
+                            st.last_action = f"{st.platform}:audio:success"
                         else:
-                            # prefer video if extension typical
                             if res.file_path.suffix.lower() in {".mp4",".mov",".m4v",".webm",".mkv"}:
                                 await context.bot.send_video(chat_id, res.file_path.open('rb'), supports_streaming=True, caption="🎬 Готово!")
                             else:
                                 await context.bot.send_document(chat_id, res.file_path.open('rb'), caption="📦 Готово!")
+                            st.last_action = f"{st.platform}:video:{st.quality or 'best'}:success"
+                        save_download({
+                            "userId": user_id,
+                            "platform": st.platform,
+                            "mode": st.mode,
+                            "quality": st.quality or "best",
+                            "url": url,
+                            "backend": backend.name,
+                            "filename": res.filename,
+                            "filesize": res.file_path.stat().st_size if res.file_path.exists() else None,
+                        })
+                        context.user_data["state"] = st
                         await context.bot.send_message(chat_id, "Оставите отзыв? 📝", reply_markup=review_optin_kb())
                         return
                     except Exception as e:
                         last_err = e
-                        if attempt < 3:
-                            await asyncio.sleep(3)
-                        else:
-                            logger.warning("backend %s failed after 3 attempts: %s", backend.name, e)
-                # move to next backend
+                        continue
+            st.last_action = f"{st.platform}:{st.mode}:error"
+            context.user_data["state"] = st
             await context.bot.send_message(chat_id, f"❌ Ошибка загрузки 😢\nПопробуйте другую ссылку или качество.\n\nПодробности: {last_err}")
             await context.bot.send_message(chat_id, "Хотите оставить отзыв? 📝", reply_markup=review_optin_kb())
         finally:

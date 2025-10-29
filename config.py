@@ -9,6 +9,10 @@ if not BOT_TOKEN:
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+# MongoDB
+MONGO_URI = os.getenv("MONGO_URI")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "video_bot")
+
 # Platforms & modes
 PLATFORM_TIKTOK = "tiktok"
 PLATFORM_YOUTUBE = "youtube"
