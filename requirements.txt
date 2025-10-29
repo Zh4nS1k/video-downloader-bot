@@ -1,0 +1,7 @@
+python-telegram-bot==21.4
+python-dotenv==1.0.1
+aiofiles==24.1.0
+python-telegram-bot==21.4
+yt-dlp>=2025.01.01
+pytube>=15.0.0
+python-dotenv>=1.0.1
